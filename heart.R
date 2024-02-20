@@ -1,4 +1,4 @@
-setwd("C:/Users/marco misseri/OneDrive/Documents/1mam4/R/KKK")
+setwd("C:/Users/marco/OneDrive/Documents/GitHub/Kaggle-chalenge-heart-disease")
 data <- read.csv("heart.csv", sep = ",")
 #print( head(data))
 
@@ -11,7 +11,7 @@ data$ExerciseAngina <- ifelse(data$ExerciseAngina == "Y",1,0)
 data$ST_Slope <- ifelse(data$ST_Slope == "Up", 0,
                         ifelse(data$ST_Slope == "Flat", 1, 2))
 #print( head(data))
-
+pairs(data, main = "Matrice de Scatter Plots")
 
 data_mat <- cor(data)
 #print(data_mat)
