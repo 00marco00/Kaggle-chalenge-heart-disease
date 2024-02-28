@@ -1,4 +1,4 @@
-setwd("C:/Users/marco/OneDrive/Documents/GitHub/Kaggle-chalenge-heart-disease")
+setwd("C:/Users/marco misseri/OneDrive/Documents/1mam4/R/KKK/Kaggle-chalenge-heart-disease")
 data <- read.csv("heart.csv", sep = ",")
 #print( head(data))
 
@@ -16,9 +16,43 @@ pairs(data, main = "Matrice de Scatter Plots")
 data_mat <- cor(data)
 #print(data_mat)
 
+counts1 <- table(data$Sex)
+
+# Renommer les étiquettes pour plus de clarté
+names(counts1) <- c("Femme", "Homme")
+
+# Créer l'histogramme
+barplot(counts1, 
+        main = "Répartition Homme/Femme des décès par crise cardiaque",
+        xlab = "Sexe",
+        ylab = "Nombre d'individus",
+        col = c("pink", "lightblue"))
+legend("topright", legend = counts1, fill = c("pink", "lightblue"))
+
 
 modele_logistique <- glm(HeartDisease ~ Age + Sex + ChestPainType + RestingBP + Cholesterol + FastingBS + RestingECG + MaxHR + ExerciseAngina + Oldpeak + ST_Slope, data = data, family = binomial(link = "logit"))
 #print(summary(modele_logistique))
+
+data_heart_d <- subset(data, HeartDisease == 1)
+# Calculer le nombre d'individus par sexe (en supposant que 1 = homme, 0 = femme)
+counts <- table(data_heart_d$Sex)
+
+# Renommer les étiquettes pour plus de clarté
+names(counts) <- c("Femme", "Homme")
+
+# Créer l'histogramme
+barplot(counts, 
+        main = "Répartition Homme/Femme des décès par crise cardiaque",
+        xlab = "Sexe",
+        ylab = "Nombre d'individus",
+        col = c("pink", "lightblue"))
+legend("topright", legend = counts, fill = c("pink", "lightblue"))
+
+
+modele_logistique <- glm(HeartDisease ~ Age + Sex + ChestPainType + RestingBP + Cholesterol + FastingBS + RestingECG + MaxHR + ExerciseAngina + Oldpeak + ST_Slope, data = data, family = binomial(link = "logit"))
+#print(summary(modele_logistique))
+
+
 
 
 predictions <- predict(modele_logistique, type = "response")
