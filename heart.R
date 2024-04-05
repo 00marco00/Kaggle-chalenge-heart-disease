@@ -28,6 +28,8 @@ counts_total <- table(data$Sex)
 # Renommer les étiquettes pour plus de clarté
 names(counts_total) <- c("Femme", "Homme")
 
+data_heart_d = data[data$HeartDisease == 1, ]
+
 # Nombre d'individus malades par sexe
 counts_malades <- table(data_heart_d$Sex)
 
