@@ -1,5 +1,17 @@
 #chargement et traitement des données
 
+memory.limit(size=12000)
+library(doParallel)
+library(foreach)
+
+# Détecter le nombre de cœurs disponibles
+no_cores <- detectCores() - 2  # Garder un cœur libre pour le système
+
+# Enregistrer le backend parallèle à utiliser avec foreach
+registerDoParallel(cores = no_cores)
+
+
+
 setwd("C:/Users/marco/OneDrive/Documents/GitHub/Kaggle-chalenge-heart-disease")
 data <- read.csv("heart.csv", sep = ",")
 #print( head(data))
@@ -8,7 +20,7 @@ data <- read.csv("heart.csv", sep = ",")
 data$Sex <- ifelse(data$Sex == "M", 1, -1)
 data$RestingECG <- ifelse(data$RestingECG == "Normal",1,-1)
 data$ChestPainType <- ifelse(data$ChestPainType == "ATA", -1,
-                                    ifelse(data$ChestPainType == "NAP", 0, 1))
+                             ifelse(data$ChestPainType == "NAP", 0, 1))
 data$ExerciseAngina <- ifelse(data$ExerciseAngina == "Y",1,-1)
 data$ST_Slope <- ifelse(data$ST_Slope == "Up", -1,
                         ifelse(data$ST_Slope == "Flat", 0, 1))
@@ -96,8 +108,6 @@ modele_logistique <- glm(HeartDisease ~ Age + Sex + ChestPainType  + Cholesterol
 #print(summary(modele_logistique))
 
 
-
-
 predictions <- predict(modele_logistique, type = "response")
 class_pred <- ifelse(predictions > 0.5, 1, 0)
 #print(class_pred)
@@ -155,7 +165,7 @@ data$HeartDisease <- as.factor(data$HeartDisease)
 modele_rf <- randomForest(HeartDisease ~ Age + Sex + ChestPainType + Cholesterol + FastingBS + MaxHR + ExerciseAngina + Oldpeak + ST_Slope, 
                           data = data, 
                           ntree = 500,  # Nombre d'arbres à générer, peut être ajusté selon les besoins
-                          mtry = 3,     # Nombre de variables testées à chaque division, peut être ajusté
+                          mtry = 2,     # Nombre de variables testées à chaque division, peut être ajusté
                           importance = TRUE)  # Pour calculer l'importance des variables
 
 # Affichage du résumé du modèle
@@ -231,7 +241,7 @@ testData <- dt[-index, ]
 
 # Préparation des données pour xgboost
 # Ensemble d'entraînement
-train_matrix <- model.matrix(~ . - 1, data = trainData)  # Supprime l'intercept
+train_matrix <- model.matrix(HeartDisease ~ Age + Sex + ChestPainType + Cholesterol + FastingBS + MaxHR + ExerciseAngina + Oldpeak + ST_Slope, data = trainData)
 train_labels <- as.numeric(trainData$HeartDisease)  # Conserve les étiquettes comme 0 et 1
 dtrain <- xgb.DMatrix(data = train_matrix, label = train_labels)
 
@@ -250,7 +260,7 @@ nrounds <- 100
 modele_gb2 <- xgb.train(params = params, data = dtrain, nrounds = nrounds)
 
 # Préparation de l'ensemble de test
-test_matrix <- model.matrix(~ . - 1, data = testData)  # Supprime l'intercept
+test_matrix <- model.matrix(~ Age + Sex + ChestPainType + Cholesterol + FastingBS + MaxHR + ExerciseAngina + Oldpeak + ST_Slope , data = testData)
 test_labels <- as.numeric(testData$HeartDisease)  # Conserve les étiquettes comme 0 et 1
 dtest <- xgb.DMatrix(data = test_matrix)
 
@@ -270,9 +280,42 @@ print(paste("Erreur de classification :", classification_error))
 
 
 ##################################################################################
+print("ada")
+library(caret)
+library(ada)
 
-#test de plot
+# Préparation des données, en supposant que `data` est déjà chargé et que HeartDisease est la variable de réponse
+set.seed(123)  # Pour la reproductibilité
+index <- sample(1:nrow(data), size = 0.8 * nrow(data), replace = FALSE)  # 80% pour l'entraînement
+trainData <- data[index, ]
+testData <- data[-index, ]
 
+# Spécification du contrôle de la formation avec validation croisée, par exemple
+#fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+fitControl <- trainControl(method = "cv", number = 5)  # Utilisez une validation croisée simple avec moins de plis
+
+
+# Ajustement du modèle AdaBoost
+modele_ada <- train(HeartDisease ~ Age + Sex + ChestPainType + Cholesterol + FastingBS + MaxHR + ExerciseAngina + Oldpeak + ST_Slope,
+                    data = trainData,
+                    method = "ada",
+                    trControl = fitControl,
+                    tuneLength = 5) #5
+
+# Résumé du modèle
+print(modele_ada)
+
+# Prédiction sur l'ensemble de test
+predictions <- predict(modele_ada, newdata = testData)
+
+# Calcul de l'exactitude
+confusionMatrix <- confusionMatrix(predictions, testData$HeartDisease)
+accuracy <- sum(diag(confusionMatrix$table)) / sum(confusionMatrix$table)
+classification_error <- 1 - accuracy
+
+# Affichage de l'exactitude et de l'erreur de classification
+print(paste("Exactitude :", accuracy))
+print(paste("Erreur de classification :", classification_error))
 
 
 
