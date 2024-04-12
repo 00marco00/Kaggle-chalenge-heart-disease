@@ -1,0 +1,58 @@
+---
+title: "Projet Kaggle"
+author: "Allan Clerc, François Canava, Julien Gaultier, Marco Misseri"
+date: "2024-04-12"
+output: html_document
+---
+
+### Introduction
+
+Nous allons étudier un jeu de données portant sur les maladies cardiaques recueillies sur 918 patients. Il contient douze attributs décrivants les symptômes et résultats d'analyses des patients comme l'age, le sexe, le type de douleur thoracique, le taux de cholesterol... Le jeu de données est donné dans le .zip : \url{heart.csv}, ou : \url{https://www.kaggle.com/datasets/fedesoriano/heart-failure-prediction/data}. \\
+
+```{r}
+#Chargement du jeu de données
+
+setwd(".")
+
+data <- read.csv("heart.csv", sep = ",")
+```
+
+
+Nous allons désormais traiter des données afin de remplacer les données de type chaîne de caractères par des données numériques afin de pouvoir les compter et les étudier plus facilement.
+```{r}
+data$Sex <- ifelse(data$Sex == "M", 1, -1)
+data$RestingECG <- ifelse(data$RestingECG == "Normal",1,-1)
+data$ChestPainType <- ifelse(data$ChestPainType == "ATA", -1,
+                                    ifelse(data$ChestPainType == "NAP", 0, 1))
+data$ExerciseAngina <- ifelse(data$ExerciseAngina == "Y",1,-1)
+data$ST_Slope <- ifelse(data$ST_Slope == "Up", -1,
+                        ifelse(data$ST_Slope == "Flat", 0, 1))
+```
+
+
+### Analyse statistique
+
+
+### Affichage de la matrice de corrélation : 
+```{r}
+pairs(data, main = "Matrice de Scatter Plots")
+
+data_mat <- cor(data)
+```
+
+
+### Entrainement 
+```{r}
+# On sépare les données en partie pour l'entrainement et une pour les tests
+pourcentageTraining = 80
+nSamples = nrow(data)
+indices <- sample(1:round(0.8 * nSamples), round(0.8 * nSamples), replace = FALSE)
+dataTraining <- data[indices, ]
+
+indices <- sample(round(0.8 * nSamples)+1:nSamples, round(0.2 * nSamples), replace = FALSE)
+# Sélectionnez les lignes correspondantes
+dataTesting <- data[indices, ]
+```
+
+
+
