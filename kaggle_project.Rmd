@@ -2,12 +2,18 @@
 title: "Projet Kaggle"
 author: "Allan Clerc, François Canava, Julien Gaultier, Marco Misseri"
 date: "2024-04-12"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
 ---
 
 ### Introduction
 
-Nous allons étudier un jeu de données portant sur les maladies cardiaques recueillies sur 918 patients. Il contient douze attributs décrivants les symptômes et résultats d'analyses des patients comme l'age, le sexe, le type de douleur thoracique, le taux de cholesterol... Le jeu de données est donné dans le .zip : \url{heart.csv}, ou : \url{https://www.kaggle.com/datasets/fedesoriano/heart-failure-prediction/data}. \\
+Nous allons étudier un jeu de données portant sur les maladies cardiaques recueillies sur 918 patients. Il contient douze attributs décrivants les symptômes et résultats d'analyses des patients comme l'age, le sexe, le type de douleur thoracique, le taux de cholesterol... Le jeu de données est donné dans le .zip : heart.csv ou : <https://www.kaggle.com/datasets/fedesoriano/heart-failure-prediction/data>
+
+Objectifs : \
+- Etudier les corrélations entre les différents attributs et les cas de crise cardiaque. \
+- Classifier et prédire quand un patient est sujet à souffrir d'une crise cardiaque en fonction de plusieurs attributs.
 
 ```{r}
 #Chargement du jeu de données
@@ -17,8 +23,8 @@ setwd(".")
 data <- read.csv("heart.csv", sep = ",")
 ```
 
-
 Nous allons désormais traiter des données afin de remplacer les données de type chaîne de caractères par des données numériques afin de pouvoir les compter et les étudier plus facilement.
+
 ```{r}
 data$Sex <- ifelse(data$Sex == "M", 1, -1)
 data$RestingECG <- ifelse(data$RestingECG == "Normal",1,-1)
@@ -29,19 +35,95 @@ data$ST_Slope <- ifelse(data$ST_Slope == "Up", -1,
                         ifelse(data$ST_Slope == "Flat", 0, 1))
 ```
 
-
 ### Analyse statistique
 
+```{r}
 
-### Affichage de la matrice de corrélation : 
+total <- length(data$HeartDisease)
+counts <- table(data$HeartDisease)
+percentages <- counts / total * 100
+labels <- paste0(round(percentages, 2), "%")
+pie(percentages, col = c("orange","red"), labels = labels, main = "Répartition des pourcentages")
+legend("topright", legend = c("No heart disease", "Heart disease"), fill = c("orange","red"))
+
+```
+
+\ On note que les données sont plutôt bien réparties entre les patients malades et les sains.
+
+#### Relations entre les variables et la variable visée
+
+```{r}
+# Créer une liste de couleurs pour les différentes catégories de la variable cible
+colors <- c("green", "red")  # Ajoutez plus de couleurs si nécessaire
+# Définir les dimensions du graphique
+variables <- c(data$Sex, data$ChestPainType, data$Cholesterol, data$RestingECG)
+par(mfrow = c(2, 2))  # Divise le graphique en 3 lignes et 2 colonnes
+
+
+
+table_data <- table(data$HeartDisease, data$Sex)
+barplot(table_data, beside = TRUE, col = colors,
+        main = "Sex vs HeartDisease", ylab = "Count")
+table_data <- table(data$HeartDisease, data$ChestPainType)
+barplot(table_data, beside = TRUE, col = colors,
+        main = "Chest pain type vs HeartDisease",ylab = "Count")
+
+legend("topright", legend = c("No Heart Disease", "Heart Disease"),
+       fill = colors)
+
+
+table_data <- table(data$HeartDisease, data$ST_Slope)
+barplot(table_data, beside = TRUE, col = colors,
+        main = "ST_slope vs HeartDisease", ylab = "Count")
+table_data <- table(data$HeartDisease, data$RestingECG)
+barplot(table_data, beside = TRUE, col = colors,
+        main = "Resting ECG vs HeartDisease", ylab = "Count")
+
+
+```
+
+-   Dans ce jeu de données, les hommes ont plus de chances d'être malades que d'avoir un coeur sain, tandis ce que c'est l'inverse pour les femmes. \
+-   Le type de douleur thoracique ASY semble être fortement lié à la précense d'une maladie cardiaque. \
+-   La donnée RestingECG ne permet pas de différencier clairement les malades des non-malades, en effet on voit que peut importe la valeur de cet attribut, on a environ 50% de malades et 50% de sains. \
+-   Le ST_Slope nous permet de voir qu'une valeur "basse" ne permet de déterminer quoi que ce soit. Par contre, une valeur "plate" tend vers la précense d'une maladie et "haute" vers la non-présence de maladie cardiaque. \
+
+```{r}
+# Création de tranches d'âge
+data$AgeGroup <- cut(data$Age, breaks = seq(from = min(data$Age), to = max(data$Age), by = 10))
+
+# Calculer le nombre total de personnes par tranche d'âge
+total_par_age <- table(data$AgeGroup)
+
+# Filtrer pour ne garder que les personnes malades
+data_malade <- subset(data, HeartDisease == 1)
+
+# Calculer le nombre de personnes malades par tranche d'âge
+malades_par_age <- table(data_malade$AgeGroup)
+
+# Calculer le ratio de personnes malades par tranche d'âge pour 100 personnes
+ratio_malades_par_100 <- (malades_par_age / total_par_age) * 100
+
+# Créer un diagramme à barres pour ces ratios
+barplot(ratio_malades_par_100, 
+        main = "Pourcentage de personnes malades par tranche d'âge pour 100 personnes", 
+        xlab = "Tranche d'âge", 
+        ylab = "Pourcentage de malades", 
+        col = "lightblue",
+        las = 2) # Rotation des étiquettes de l'axe des x
+```
+
+Ce graphique nous fait penser que plus on est agé, plus on a de chance d'être malade (comme le pourcentage de malades augmente). Cependant, on a vu que la donnée age n'est généralement pas représentative car elle n'est pas directement corrélée à la maladie, mais plutôt elle tend à être corrélée à d'autres facteurs tels que le taux de cholesterol etc, qui eux sont corrélés avec la présence de maladie cardiaque.
+
+### Affichage de la matrice de corrélation :
+
 ```{r}
 pairs(data, main = "Matrice de Scatter Plots")
 
-data_mat <- cor(data)
+#data_mat <- cor(data)
 ```
 
+### Entrainement
 
-### Entrainement 
 ```{r}
 # On sépare les données en partie pour l'entrainement et une pour les tests
 pourcentageTraining = 80
@@ -53,6 +135,3 @@ indices <- sample(round(0.8 * nSamples)+1:nSamples, round(0.2 * nSamples), repla
 # Sélectionnez les lignes correspondantes
 dataTesting <- data[indices, ]
 ```
-
-
-
