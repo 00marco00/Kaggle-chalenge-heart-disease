@@ -11,8 +11,8 @@ output:
 
 Nous allons étudier un jeu de données portant sur les maladies cardiaques recueillies sur 918 patients. Il contient douze attributs décrivants les symptômes et résultats d'analyses des patients comme l'age, le sexe, le type de douleur thoracique, le taux de cholesterol... Le jeu de données est donné dans le .zip : heart.csv ou : <https://www.kaggle.com/datasets/fedesoriano/heart-failure-prediction/data>
 
-Objectifs : \
-- Etudier les corrélations entre les différents attributs et les cas de crise cardiaque. \
+Objectifs :\
+- Etudier les corrélations entre les différents attributs et les cas de crise cardiaque.\
 - Classifier et prédire quand un patient est sujet à souffrir d'une crise cardiaque en fonction de plusieurs attributs.
 
 ```{r}
@@ -48,7 +48,7 @@ legend("topright", legend = c("No heart disease", "Heart disease"), fill = c("or
 
 ```
 
-\ On note que les données sont plutôt bien réparties entre les patients malades et les sains.
+ On note que les données sont plutôt bien réparties entre les patients malades et les sains.
 
 #### Relations entre les variables et la variable visée
 
@@ -82,10 +82,10 @@ barplot(table_data, beside = TRUE, col = colors,
 
 ```
 
--   Dans ce jeu de données, les hommes ont plus de chances d'être malades que d'avoir un coeur sain, tandis ce que c'est l'inverse pour les femmes. \
--   Le type de douleur thoracique ASY semble être fortement lié à la précense d'une maladie cardiaque. \
--   La donnée RestingECG ne permet pas de différencier clairement les malades des non-malades, en effet on voit que peut importe la valeur de cet attribut, on a environ 50% de malades et 50% de sains. \
--   Le ST_Slope nous permet de voir qu'une valeur "basse" ne permet de déterminer quoi que ce soit. Par contre, une valeur "plate" tend vers la précense d'une maladie et "haute" vers la non-présence de maladie cardiaque. \
+-   Dans ce jeu de données, les hommes ont plus de chances d'être malades que d'avoir un coeur sain, tandis ce que c'est l'inverse pour les femmes.\
+-   Le type de douleur thoracique ASY semble être fortement lié à la précense d'une maladie cardiaque.\
+-   La donnée RestingECG ne permet pas de différencier clairement les malades des non-malades, en effet on voit que peut importe la valeur de cet attribut, on a environ 50% de malades et 50% de sains.\
+-   Le ST_Slope nous permet de voir qu'une valeur "basse" ne permet de déterminer quoi que ce soit. Par contre, une valeur "plate" tend vers la précense d'une maladie et "haute" vers la non-présence de maladie cardiaque.\
 
 ```{r}
 # Création de tranches d'âge
@@ -125,13 +125,123 @@ pairs(data, main = "Matrice de Scatter Plots")
 ### Entrainement
 
 ```{r}
-# On sépare les données en partie pour l'entrainement et une pour les tests
-pourcentageTraining = 80
-nSamples = nrow(data)
-indices <- sample(1:round(0.8 * nSamples), round(0.8 * nSamples), replace = FALSE)
-dataTraining <- data[indices, ]
+data$HeartDisease <- factor(data$HeartDisease)
 
-indices <- sample(round(0.8 * nSamples)+1:nSamples, round(0.2 * nSamples), replace = FALSE)
-# Sélectionnez les lignes correspondantes
-dataTesting <- data[indices, ]
+# On sépare les données en partie pour l'entrainement et une pour les tests
+pourcentageTraining = 0.9
+nSamples = nrow(data)
+set.seed(123)
+index <- sample(1:nrow(data), size = pourcentageTraining * nrow(data), replace = FALSE)
+trainData <- data[index, ]
+testData <- data[-index, ]
+
 ```
+
+
+### classification
+
+```{r}
+#modele_logistique <- glm(HeartDisease ~ Age + Sex + ChestPainType + RestingBP + Cholesterol + FastingBS + RestingECG + MaxHR + ExerciseAngina + Oldpeak + ST_Slope, data = data, family = binomial(link = "logit"))
+#print(summary(modele_logistique))
+
+# On peux noter que fastingBS a une faible incidence sur les résultats
+modele_logistique <- glm(HeartDisease ~  Sex + ChestPainType  + Cholesterol + MaxHR + ExerciseAngina + Oldpeak + ST_Slope, data = trainData, family = binomial(link = "logit"))
+#print(summary(modele_logistique))
+
+
+predictions <- predict(modele_logistique,newdata = testData, type = "response")
+class_pred <- ifelse(predictions > 0.5, 1, 0)
+#print(class_pred)
+
+
+res <- table(Predicted = class_pred, Actual = testData$HeartDisease)
+#print(res)
+erreur_classification <- sum(res[1,2], res[2,1]) / sum(res)
+print(erreur_classification)
+
+```
+
+
+
+### random forest 
+
+```{r}
+# Chargement du package randomForest
+library(randomForest)
+
+# Ajustement du modèle Random Forest
+# On a enlever les variable age , FastingBS pour diminuer l'erreur
+modele_rf <- randomForest(HeartDisease ~ Sex + ChestPainType + Cholesterol + MaxHR + ExerciseAngina + Oldpeak + ST_Slope, 
+                          data = data, 
+                          ntree = 1500,  # Nombre d'arbres à générer
+                          mtry = 2,      # Nombre de variables testées à chaque division
+                          importance = TRUE,  # Calculer l'importance des variables
+                          type = "classification")  # Spécifier le type de modèle
+
+# Affichage du résumé du modèle
+print(modele_rf)
+
+# Pour voir l'importance des variables
+importance(modele_rf)
+```
+```{r}
+
+library(ggplot2)
+
+# Calcul de l'importance des variables et conversion en dataframe
+varImp <- importance(modele_rf)
+importance_df <- as.data.frame(varImp)
+
+# Création du graphique d'importance des variables
+ggplot(importance_df, aes(x = reorder(row.names(importance_df), MeanDecreaseGini), y = MeanDecreaseGini)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +  # Inverser les axes pour une meilleure lisibilité
+  labs(x = "Variables", y = "Importance", title = "Importance des variables dans le modèle Random Forest") +
+  theme_minimal()
+
+
+```
+
+
+### Adaboost
+
+```{r}
+library(caret)
+library(ada)
+# Spécification du contrôle de la formation avec validation croisée, par exemple
+#fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+fitControl <- trainControl(method = "cv", number = 5)  # Utilisez une validation croisée simple avec moins de plis
+
+
+# Ajustement du modèle AdaBoost
+modele_ada <- train(HeartDisease ~ Sex + ChestPainType + Cholesterol +  MaxHR + ExerciseAngina + Oldpeak + ST_Slope,
+                    data = trainData,
+                    method = "ada",
+                    trControl = fitControl,
+                    tuneLength = 5) #5
+
+# Résumé du modèle
+print(modele_ada)
+
+# Prédiction sur l'ensemble de test
+predictions <- predict(modele_ada, newdata = testData)
+
+# Calcul de l'exactitude
+confusionMatrix <- confusionMatrix(predictions, testData$HeartDisease)
+accuracy <- sum(diag(confusionMatrix$table)) / sum(confusionMatrix$table)
+classification_error <- 1 - accuracy
+
+# Affichage de l'exactitude et de l'erreur de classification
+print(paste("Exactitude :", accuracy))
+print(paste("Erreur de classification :", classification_error))
+
+```
+
+```{r}
+
+
+
+```
+
+
+
