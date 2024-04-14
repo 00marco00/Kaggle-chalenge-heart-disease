@@ -23,18 +23,6 @@ setwd(".")
 data <- read.csv("heart.csv", sep = ",")
 ```
 
-Nous allons désormais traiter des données afin de remplacer les données de type chaîne de caractères par des données numériques afin de pouvoir les compter et les étudier plus facilement.
-
-```{r}
-data$Sex <- ifelse(data$Sex == "M", 1, -1)
-data$RestingECG <- ifelse(data$RestingECG == "Normal",1,-1)
-data$ChestPainType <- ifelse(data$ChestPainType == "ATA", -1,
-                                    ifelse(data$ChestPainType == "NAP", 0, 1))
-data$ExerciseAngina <- ifelse(data$ExerciseAngina == "Y",1,-1)
-data$ST_Slope <- ifelse(data$ST_Slope == "Up", -1,
-                        ifelse(data$ST_Slope == "Flat", 0, 1))
-```
-
 ### Analyse statistique
 
 ```{r}
@@ -112,8 +100,20 @@ barplot(ratio_malades_par_100,
         las = 2) # Rotation des étiquettes de l'axe des x
 ```
 
-Ce graphique nous fait penser que plus on est agé, plus on a de chance d'être malade (comme le pourcentage de malades augmente). Cependant, on a vu que la donnée age n'est généralement pas représentative car elle n'est pas directement corrélée à la maladie, mais plutôt elle tend à être corrélée à d'autres facteurs tels que le taux de cholesterol etc, qui eux sont corrélés avec la présence de maladie cardiaque.
+Ce graphique nous fait penser que plus on est agé, plus on a de chance d'être malade (comme le pourcentage de malades augmente). Cependant, on a vu que la donnée age n'est généralement pas représentative car elle n'est pas directement corrélée à la maladie, mais plutôt elle tend à être corrélée à d'autres facteurs tels que le taux de cholesterol etc, qui eux sont corrélés avec la présence de maladie cardiaque. \
+\
+\
+Nous allons désormais traiter des données afin de remplacer les données de type chaîne de caractères par des données numériques afin de pouvoir les compter et les étudier plus facilement.
 
+```{r}
+data$Sex <- ifelse(data$Sex == "M", 1, -1)
+data$RestingECG <- ifelse(data$RestingECG == "Normal",1,-1)
+data$ChestPainType <- ifelse(data$ChestPainType == "ATA", -1,
+                                    ifelse(data$ChestPainType == "NAP", 0, 1))
+data$ExerciseAngina <- ifelse(data$ExerciseAngina == "Y",1,-1)
+data$ST_Slope <- ifelse(data$ST_Slope == "Up", -1,
+                        ifelse(data$ST_Slope == "Flat", 0, 1))
+```
 ### Affichage de la matrice de corrélation :
 
 ```{r}
