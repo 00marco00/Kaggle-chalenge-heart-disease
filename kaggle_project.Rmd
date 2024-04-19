@@ -25,6 +25,7 @@ data <- read.csv("heart.csv", sep = ",")
 
 ### Analyse statistique
 
+
 ```{r}
 
 total <- length(data$HeartDisease)
@@ -138,14 +139,47 @@ testData <- data[-index, ]
 ```
 
 
+
+```{r}
+bp = boxplot(data[, -ncol(data)], plot = FALSE)
+
+data_clean = data
+
+for (i in 1:(ncol(data))){
+  # On a beaucoup moins de femmes que d'hommes donc il faut faire attention à ce que le code ne supprime pas toutes les donnés provenant de patientes
+  if(names(data_clean[i]) == "Sex"){
+    next
+  }
+  valeurs_aberrantes = bp$out[which(bp$group == i)]
+  data_clean = data_clean[!data_clean[, i] %in% valeurs_aberrantes, ]
+}
+
+for (i in 1:(ncol(data_clean))) {
+  boxplot(data_clean[, i], main = names(data_clean[i]))
+}
+
+rm(i)
+
+```
+
+
+```{r}
+#data = data_clean
+```
+
+
 ### classification
+
 
 ```{r}
 #modele_logistique <- glm(HeartDisease ~ Age + Sex + ChestPainType + RestingBP + Cholesterol + FastingBS + RestingECG + MaxHR + ExerciseAngina + Oldpeak + ST_Slope, data = data, family = binomial(link = "logit"))
 #print(summary(modele_logistique))
 
+#observation_weights <- rep(1, nrow(trainData))
+#print(observation_weights)
+
 # On peux noter que fastingBS a une faible incidence sur les résultats
-modele_logistique <- glm(HeartDisease ~  Sex + ChestPainType  + Cholesterol + MaxHR + ExerciseAngina + Oldpeak + ST_Slope, data = trainData, family = binomial(link = "logit"))
+modele_logistique <- glm(HeartDisease ~  Sex + ChestPainType * MaxHR + Cholesterol + ExerciseAngina + Oldpeak + ST_Slope, data = trainData, family = binomial(link = "logit")) #,weights = observation_weights)
 #print(summary(modele_logistique))
 
 
@@ -208,13 +242,15 @@ ggplot(importance_df, aes(x = reorder(row.names(importance_df), MeanDecreaseGini
 ```{r}
 library(caret)
 library(ada)
+
+
 # Spécification du contrôle de la formation avec validation croisée, par exemple
 #fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
 fitControl <- trainControl(method = "cv", number = 5)  # Utilisez une validation croisée simple avec moins de plis
 
 
 # Ajustement du modèle AdaBoost
-modele_ada <- train(HeartDisease ~ Sex + ChestPainType + Cholesterol +  MaxHR + ExerciseAngina + Oldpeak + ST_Slope,
+modele_ada <- train(HeartDisease ~ Sex + ChestPainType + MaxHR + Cholesterol + ExerciseAngina + Oldpeak + ST_Slope,
                     data = trainData,
                     method = "ada",
                     trControl = fitControl,

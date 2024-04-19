@@ -28,7 +28,7 @@ data$ST_Slope <- ifelse(data$ST_Slope == "Up", -1,
 pairs(data, main = "Matrice de Scatter Plots")
 
 data_mat <- cor(data)
-#print(data_mat)
+print(data_mat)
 
 dt <- data
 
