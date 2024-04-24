@@ -21,6 +21,16 @@ Objectifs :\
 setwd(".")
 
 data <- read.csv("heart.csv", sep = ",")
+
+memory.limit(size=12000)
+library(doParallel)
+library(foreach)
+
+# Détecter le nombre de cœurs disponibles
+no_cores <- detectCores() - 2  # Garder un cœur libre pour le système
+
+# Enregistrer le backend parallèle à utiliser avec foreach
+registerDoParallel(cores = no_cores)
 ```
 
 ### Analyse statistique
@@ -126,21 +136,6 @@ pairs(data, main = "Matrice de Scatter Plots")
 ### Entrainement
 
 ```{r}
-data$HeartDisease <- factor(data$HeartDisease)
-
-# On sépare les données en partie pour l'entrainement et une pour les tests
-pourcentageTraining = 0.9
-nSamples = nrow(data)
-set.seed(123)
-index <- sample(1:nrow(data), size = pourcentageTraining * nrow(data), replace = FALSE)
-trainData <- data[index, ]
-testData <- data[-index, ]
-
-```
-
-
-
-```{r}
 bp = boxplot(data[, -ncol(data)], plot = FALSE)
 
 data_clean = data
@@ -162,9 +157,23 @@ rm(i)
 
 ```
 
-
 ```{r}
 #data = data_clean
+```
+
+
+```{r}
+data$HeartDisease <- factor(data$HeartDisease)
+
+# On sépare les données en partie pour l'entrainement et une pour les tests
+pourcentageTraining = 0.9
+nSamples = nrow(data)
+set.seed(123)
+index <- sample(1:nrow(data), size = pourcentageTraining * nrow(data), replace = FALSE)
+trainData <- data[index, ]
+testData <- data[-index, ]
+
+print(head(testData))
 ```
 
 
@@ -196,7 +205,6 @@ print(erreur_classification)
 ```
 
 
-
 ### random forest 
 
 ```{r}
@@ -205,7 +213,7 @@ library(randomForest)
 
 # Ajustement du modèle Random Forest
 # On a enlever les variable age , FastingBS pour diminuer l'erreur
-modele_rf <- randomForest(HeartDisease ~ Sex + ChestPainType + Cholesterol + MaxHR + ExerciseAngina + Oldpeak + ST_Slope, 
+modele_rf <- randomForest(HeartDisease ~ Sex + ChestPainType + MaxHR+ Cholesterol + ExerciseAngina + Oldpeak + ST_Slope, 
                           data = data, 
                           ntree = 1500,  # Nombre d'arbres à générer
                           mtry = 2,      # Nombre de variables testées à chaque division
@@ -250,7 +258,7 @@ fitControl <- trainControl(method = "cv", number = 5)  # Utilisez une validation
 
 
 # Ajustement du modèle AdaBoost
-modele_ada <- train(HeartDisease ~ Sex + ChestPainType + MaxHR + Cholesterol + ExerciseAngina + Oldpeak + ST_Slope,
+modele_ada <- train(HeartDisease ~ Sex + ChestPainType + MaxHR + Cholesterol +Cholesterol+ ExerciseAngina + Oldpeak + ST_Slope,
                     data = trainData,
                     method = "ada",
                     trControl = fitControl,
@@ -264,20 +272,18 @@ predictions <- predict(modele_ada, newdata = testData)
 
 # Calcul de l'exactitude
 confusionMatrix <- confusionMatrix(predictions, testData$HeartDisease)
+print(confusionMatrix)
 accuracy <- sum(diag(confusionMatrix$table)) / sum(confusionMatrix$table)
 classification_error <- 1 - accuracy
 
 # Affichage de l'exactitude et de l'erreur de classification
 print(paste("Exactitude :", accuracy))
 print(paste("Erreur de classification :", classification_error))
+print(paste("Faux negatif : ", (confusionMatrix$table[1,2]/nrow(testData))*100, "%"))
 
 ```
 
 ```{r}
 
-
-
 ```
-
-
 
