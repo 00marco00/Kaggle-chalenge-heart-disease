@@ -130,7 +130,9 @@ data$ST_Slope <- ifelse(data$ST_Slope == "Up", -1,
 ```{r}
 pairs(data, main = "Matrice de Scatter Plots")
 
-#data_mat <- cor(data)
+data_mat <- cor(data[, -ncol(data)])
+print(data_mat)
+
 ```
 
 ### Entrainement
