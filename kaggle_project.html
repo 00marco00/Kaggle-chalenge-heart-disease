@@ -583,7 +583,12 @@ boxplot(data_clean$MaxHR, main=&quot;MaxHR&quot;)</code></pre>
 <pre class="r"><code>#data = data_clean</code></pre>
 <p>On ne nétoie pas les données car on remarque que dans tous les
 modèles de prédiction l’erreur augmente avec les données
-“data_clean”.</p>
+“data_clean”.<br />
+<br />
+Suite à nos analyses, nous avons décider de retirer les variables
+RestingECG, FastingBS, RestingBP car ils n’ont pas d’influence
+significative sur la présence d’une maladie cardiaque. De plus, nous
+retirons également l’age pour les raisons expliquées au-dessus.</p>
 </div>
 </div>
 <div id="entrainement" class="section level2">
