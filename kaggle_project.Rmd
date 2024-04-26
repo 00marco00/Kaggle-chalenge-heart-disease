@@ -166,9 +166,9 @@ rm(i)
 data$HeartDisease <- factor(data$HeartDisease)
 
 # On sépare les données en partie pour l'entrainement et une pour les tests
-pourcentageTraining = 0.9
+pourcentageTraining = 0.8
 nSamples = nrow(data)
-set.seed(123)
+#set.seed(123)
 index <- sample(1:nrow(data), size = pourcentageTraining * nrow(data), replace = FALSE)
 trainData <- data[index, ]
 testData <- data[-index, ]
@@ -205,7 +205,8 @@ print(erreur_classification)
 ```
 
 
-### random forest 
+### random forest
+Notons que les algorithms de type tree sont peu sensible au scale des caractéristiques
 
 ```{r}
 # Chargement du package randomForest
@@ -254,7 +255,7 @@ library(ada)
 
 # Spécification du contrôle de la formation avec validation croisée, par exemple
 #fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
-fitControl <- trainControl(method = "cv", number = 5)  # Utilisez une validation croisée simple avec moins de plis
+fitControl <- trainControl(method = "cv", number = 10)  # Utilisez une validation croisée simple avec moins de plis
 
 
 # Ajustement du modèle AdaBoost
@@ -283,7 +284,4 @@ print(paste("Faux negatif : ", (confusionMatrix$table[1,2]/nrow(testData))*100, 
 
 ```
 
-```{r}
-
-```
 
