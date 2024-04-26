@@ -7,7 +7,7 @@ output:
   pdf_document: default
 ---
 
-### Introduction
+## Introduction
 
 Nous allons étudier un jeu de données portant sur les maladies cardiaques recueillies sur 918 patients. Il contient douze attributs décrivants les symptômes et résultats d'analyses des patients comme l'age, le sexe, le type de douleur thoracique, le taux de cholesterol... Le jeu de données est donné dans le .zip : heart.csv ou : <https://www.kaggle.com/datasets/fedesoriano/heart-failure-prediction/data>
 
@@ -16,15 +16,17 @@ Objectifs :\
 - Classifier et prédire quand un patient est sujet à souffrir d'une crise cardiaque en fonction de plusieurs attributs.
 
 ```{r}
-#Chargement du jeu de données
-
-setwd(".")
-
-data <- read.csv("heart.csv", sep = ",")
-
+#Bibliotheques 
 memory.limit(size=12000)
 library(doParallel)
 library(foreach)
+library(caret)
+library(ada)
+library(ggplot2)
+
+#Chargement du jeu de données
+setwd(".")
+data <- read.csv("heart.csv", sep = ",")
 
 # Détecter le nombre de cœurs disponibles
 no_cores <- detectCores() - 2  # Garder un cœur libre pour le système
@@ -33,11 +35,11 @@ no_cores <- detectCores() - 2  # Garder un cœur libre pour le système
 registerDoParallel(cores = no_cores)
 ```
 
-### Analyse statistique
+## Analyse statistique
 
+Nous allons donc dans un premier temps procéder à une analyse statistique des données que nous possédons. L'objectif est de déterminer quels traits sont plus ou moins importants dans la détection de maladie cardiaque.
 
 ```{r}
-
 total <- length(data$HeartDisease)
 counts <- table(data$HeartDisease)
 percentages <- counts / total * 100
@@ -47,16 +49,16 @@ legend("topright", legend = c("No heart disease", "Heart disease"), fill = c("or
 
 ```
 
- On note que les données sont plutôt bien réparties entre les patients malades et les sains.
+On note que les données sont plutôt bien réparties entre les patients malades et les sains.
 
-#### Relations entre les variables et la variable visée
+#### Relations entre chaque variable et la précense de maladie
 
 ```{r}
 # Créer une liste de couleurs pour les différentes catégories de la variable cible
 colors <- c("green", "red")  # Ajoutez plus de couleurs si nécessaire
 # Définir les dimensions du graphique
 variables <- c(data$Sex, data$ChestPainType, data$Cholesterol, data$RestingECG)
-par(mfrow = c(2, 2))  # Divise le graphique en 3 lignes et 2 colonnes
+par(mfrow = c(2, 2))  # Divise le graphique en 2 lignes et 2 colonnes
 
 
 
@@ -117,6 +119,7 @@ Ce graphique nous fait penser que plus on est agé, plus on a de chance d'être 
 Nous allons désormais traiter des données afin de remplacer les données de type chaîne de caractères par des données numériques afin de pouvoir les compter et les étudier plus facilement.
 
 ```{r}
+#On modifie les valeurs des variables qui ne sont pas numériques pour faciliter l'étude.
 data$Sex <- ifelse(data$Sex == "M", 1, -1)
 data$RestingECG <- ifelse(data$RestingECG == "Normal",1,-1)
 data$ChestPainType <- ifelse(data$ChestPainType == "ATA", -1,
@@ -125,8 +128,8 @@ data$ExerciseAngina <- ifelse(data$ExerciseAngina == "Y",1,-1)
 data$ST_Slope <- ifelse(data$ST_Slope == "Up", -1,
                         ifelse(data$ST_Slope == "Flat", 0, 1))
 ```
-### Affichage de la matrice de corrélation :
 
+### Matrice de corrélation :
 ```{r}
 pairs(data, main = "Matrice de Scatter Plots")
 
@@ -134,35 +137,42 @@ data_mat <- cor(data[, -ncol(data)])
 print(data_mat)
 
 ```
-
-### Entrainement
-
+### Boxplots
 ```{r}
 bp = boxplot(data[, -ncol(data)], plot = FALSE)
 
-data_clean = data
 
-for (i in 1:(ncol(data))){
-  # On a beaucoup moins de femmes que d'hommes donc il faut faire attention à ce que le code ne supprime pas toutes les donnés provenant de patientes
-  if(names(data_clean[i]) == "Sex"){
-    next
-  }
-  valeurs_aberrantes = bp$out[which(bp$group == i)]
-  data_clean = data_clean[!data_clean[, i] %in% valeurs_aberrantes, ]
-}
+par(mfrow = c(2,3))
+boxplot(data$Age, main="Age")
+boxplot(data$Cholesterol, main="Cholesterol")
+boxplot(data$RestingBP, main="RestingBP")
+boxplot(data$MaxHR, main="MaxHR")
+boxplot(data$Oldpeak, main="Oldpeak")
+```
 
-for (i in 1:(ncol(data_clean))) {
-  boxplot(data_clean[, i], main = names(data_clean[i]))
-}
+On enleve les valeurs abérrantes sur ce qu'on voit sur les graphes ci-dessus. Cependant, on remarque que retirer les valeurs abérrantes de Cholesterol retire presque 200 observations, on garde donc tout. Par exemple, on voit sur le 2e boxplot de MaxHR qu'il n'y a plus de valeurs aberrantes.
+```{r}
+#on enleve les valeurs aberrantes de MAxHR
+valeurs_aberrantes = bp$out[which(bp$group == 8)]
+data_clean = data[!data[, 8] %in% valeurs_aberrantes, ]
 
-rm(i)
+#on enleve les valeurs aberrantes de Oldpeak
+valeurs_aberrantes = bp$out[which(bp$group == 10)]
+data_clean = data[!data[, 10] %in% valeurs_aberrantes, ]
+
+boxplot(data_clean$MaxHR, main="MaxHR")
 
 ```
 
 ```{r}
 #data = data_clean
 ```
+On ne nétoie pas les données car on remarque que dans tous les modèles de prédiction l'erreur augmente avec les données "data_clean".
+\
+\
+Suite à nos analyses, nous avons décider de retirer les variables RestingECG, FastingBS, RestingBP car ils n'ont pas d'influence significative sur la présence d'une maladie cardiaque. De plus, nous retirons également l'age pour les raisons expliquées au-dessus.
 
+## Entrainement
 
 ```{r}
 data$HeartDisease <- factor(data$HeartDisease)
@@ -170,7 +180,7 @@ data$HeartDisease <- factor(data$HeartDisease)
 # On sépare les données en partie pour l'entrainement et une pour les tests
 pourcentageTraining = 0.8
 nSamples = nrow(data)
-#set.seed(123)
+set.seed(123)
 index <- sample(1:nrow(data), size = pourcentageTraining * nrow(data), replace = FALSE)
 trainData <- data[index, ]
 testData <- data[-index, ]
@@ -179,7 +189,7 @@ print(head(testData))
 ```
 
 
-### classification
+## Classification
 
 
 ```{r}
@@ -190,34 +200,35 @@ print(head(testData))
 #print(observation_weights)
 
 # On peux noter que fastingBS a une faible incidence sur les résultats
-modele_logistique <- glm(HeartDisease ~  Sex + ChestPainType * MaxHR + Cholesterol + ExerciseAngina + Oldpeak + ST_Slope, data = trainData, family = binomial(link = "logit")) #,weights = observation_weights)
+modele_logistique <- glm(HeartDisease ~  Sex + ST_Slope * ChestPainType + Cholesterol + ExerciseAngina + Oldpeak + MaxHR, data = trainData, family = binomial(link = "logit")) #,weights = observation_weights)
 #print(summary(modele_logistique))
 
 
 predictions <- predict(modele_logistique,newdata = testData, type = "response")
-class_pred <- ifelse(predictions > 0.5, 1, 0)
+class_pred <- ifelse(predictions > 0.3, 1, 0) #on met un seuil à 0.3 pour minimiser les faux négatifs
 #print(class_pred)
 
 
 res <- table(Predicted = class_pred, Actual = testData$HeartDisease)
-#print(res)
+print(res)
 erreur_classification <- sum(res[1,2], res[2,1]) / sum(res)
 print(erreur_classification)
 
 ```
 
 
-### random forest
-Notons que les algorithms de type tree sont peu sensible au scale des caractéristiques
+## Random forest
+Notons que les algorithmes de type tree sont peu sensibles au scale des caractéristiques.
 
 ```{r}
 # Chargement du package randomForest
 library(randomForest)
 
 # Ajustement du modèle Random Forest
+class_weights <- ifelse(data$HeartDisease == 1, 1, 5)
 # On a enlever les variable age , FastingBS pour diminuer l'erreur
-modele_rf <- randomForest(HeartDisease ~ Sex + ChestPainType + MaxHR+ Cholesterol + ExerciseAngina + Oldpeak + ST_Slope, 
-                          data = data, 
+modele_rf <- randomForest(HeartDisease ~ Sex + MaxHR+ Cholesterol + ExerciseAngina + Oldpeak + ST_Slope*ChestPainType, 
+                          data = data,
                           ntree = 1500,  # Nombre d'arbres à générer
                           mtry = 2,      # Nombre de variables testées à chaque division
                           importance = TRUE,  # Calculer l'importance des variables
@@ -229,10 +240,31 @@ print(modele_rf)
 # Pour voir l'importance des variables
 importance(modele_rf)
 ```
+
+
+On cherche un seuil qui minimise au maximum l'erreur des faux négatifs sans trop augmenter l'erreur totale.
 ```{r}
+# Calcul des probabilités prédites
+predicted_probabilities <- predict(modele_rf, newdata = testData, type = "prob")
+thresholds <- seq(0.1, 0.9, by = 0.1)
+for (threshold in thresholds) {
+  predicted_classes <- ifelse(predicted_probabilities[,2] > threshold, 1, 0)
+  cm <- table(Predicted = predicted_classes, Actual = testData$HeartDisease)
+  sensitivity <- cm[2, 2] / sum(cm[2, ])
+  specificity <- cm[1, 1] / sum(cm[1, ])
+  cat(sprintf("Threshold: %.2f, Sensitivity: %.2f, Specificity: %.2f\n", threshold, sensitivity, specificity))
+  cat("CM : ", cm)
+err_2 <- sum(cm[1,2], cm[2,1]) / sum(cm)
+print(err_2)
+}
 
-library(ggplot2)
 
+optimal_threshold <- 0.3  # Exemple d'un seuil optimal
+final_predictions <- ifelse(predicted_probabilities[, 2] > optimal_threshold, 1, 0)
+```
+
+
+```{r}
 # Calcul de l'importance des variables et conversion en dataframe
 varImp <- importance(modele_rf)
 importance_df <- as.data.frame(varImp)
@@ -243,18 +275,12 @@ ggplot(importance_df, aes(x = reorder(row.names(importance_df), MeanDecreaseGini
   coord_flip() +  # Inverser les axes pour une meilleure lisibilité
   labs(x = "Variables", y = "Importance", title = "Importance des variables dans le modèle Random Forest") +
   theme_minimal()
-
-
 ```
 
 
-### Adaboost
+## Adaboost
 
 ```{r}
-library(caret)
-library(ada)
-
-
 # Spécification du contrôle de la formation avec validation croisée, par exemple
 #fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
 fitControl <- trainControl(method = "cv", number = 10)  # Utilisez une validation croisée simple avec moins de plis
@@ -286,4 +312,7 @@ print(paste("Faux negatif : ", (confusionMatrix$table[1,2]/nrow(testData))*100, 
 
 ```
 
-
+## Conclusion
+Nous avons donc validé les objectifs en, dans un premier temps, analysant les observations afin de trouver les liens entre les différentes variables. Et dans un deuxième temps en proposant trois modèles de prédiction qui ont chacun des résultats satisfaisant. Nous avons des taux d'erreur compris entre 10 et 20% mais on augmente ce dernier en privilégiant la minimisation du taux d'erreur de faux négatifs. Ce qui dans notre cas est plus important. \
+Nous avons particulièrement travaillé sur la seed(123) afin de pouvoir garder des données constantes et donc nous avons optimisé notre code sur cette seed. Avec cette dernière le modèle Adaboost est plus performant mais en règle général (sans seed spécifiée) random forest donne de meilleurs résultats. \
+Comme ouverture nous pouvons imaginer que réaliser un algorithme de cross-validation aurait pu être bénéfique afin de vérifier que nous avons des résultats vraiment constants.
