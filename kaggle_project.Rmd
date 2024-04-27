@@ -218,7 +218,7 @@ print(erreur_classification)
 
 
 ## Random forest
-Notons que les algorithmes de type tree sont peu sensibles au scale des caractéristiques.On peut aussi noter que ces résultats varient bien moins que les résultats du modele_logistique et d'AdaBoost en fonction du dataset (sans la seed).
+Notons que les algorithmes de type tree sont peu sensibles au scale des caractéristiques.On peut aussi noter que ces résultats varient bien moins que les résultats du modèle logistique et d'AdaBoost en fonction du dataset (sans la seed).
 
 ```{r}
 # Chargement du package randomForest
@@ -262,7 +262,7 @@ print(err_2)
 optimal_threshold <- 0.3 
 final_predictions <- ifelse(predicted_probabilities[, 2] > optimal_threshold, 1, 0)
 ```
-On remarque que dans la grande majorité des cas, le seuil de 0,3 est le plus intéressant pour nous (il maximise la spécificité à 1 et ne diminue pas trop la sensibilité : seuil : 0,30, sensibilité : 0,88, spécificité : 0,99 pour la seed 123).
+On remarque que dans la grande majorité des cas, le seuil de 0.3 est le plus intéressant pour nous (il maximise la spécificité à 1 et ne diminue pas trop la sensibilité : seuil : 0,30, sensibilité : 0,88, spécificité : 0,99 pour la seed 123).
 
 
 ```{r}
@@ -278,7 +278,7 @@ ggplot(importance_df, aes(x = reorder(row.names(importance_df), MeanDecreaseGini
   theme_minimal()
 ```
 
-On peut voir que la variable avec le plus d'importance est ST_slope. (Nous nous sommes servis de ce graphique pour enlever des variables)
+On peut voir que la variable avec le plus d'importance est ST_slope. (Nous nous sommes servis de ce graphique pour enlever des variables).
 
 
 ## Adaboost
@@ -319,6 +319,6 @@ print(paste("Faux negatif : ", (confusionMatrix$table[1,2]/nrow(testData))*100, 
 
 
 ## Conclusion
-Nous avons donc validé les objectifs en, dans un premier temps, analysant les observations afin de trouver les liens entre les différentes variables. Et dans un deuxième temps en proposant trois modèles de prédiction qui ont chacun des résultats satisfaisant. Nous avons des taux d'erreur compris entre 10 et 20% mais on augmente ce dernier en privilégiant la minimisation du taux d'erreur de faux négatifs. Ce qui dans notre cas est plus important. \
+Nous avons donc validé les objectifs en, dans un premier temps, analysant les observations afin de trouver les liens entre les différentes variables. Et dans un second temps en proposant trois modèles de prédiction qui ont chacun des résultats satisfaisant. Nous avons des taux d'erreur compris entre 10 et 20% mais on augmente ce dernier en privilégiant la minimisation du taux d'erreur de faux négatifs. Ce qui dans notre cas est plus important. \
 Nous avons particulièrement travaillé sur la seed(123) afin de pouvoir garder des données constantes et donc nous avons optimisé notre code sur cette seed. Avec cette dernière le modèle Adaboost est plus performant mais en règle général (sans seed spécifiée) random forest donne de meilleurs résultats. \
 Comme ouverture nous pouvons imaginer que réaliser un algorithme de cross-validation aurait pu être bénéfique afin de vérifier que nous avons des résultats vraiment constants.
